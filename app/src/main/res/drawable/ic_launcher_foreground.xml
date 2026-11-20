@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Outer speech bubble badge inside 66dp safe zone (coords ~25..83) -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M54,26C37.43,26 24,38.09 24,53c0,7.25 3.18,13.84 8.38,18.72L28.5,81.5l11.24,-4.45C44.13,78.94 48.94,80 54,80c16.57,0 30,-12.09 30,-27S70.57,26 54,26z" />
+    <!-- Soundwave bars representing speaking & AI fluency -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M41,47a2.5,2.5 0,0 1,5 0v12a2.5,2.5 0,0 1,-5 0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M51.5,41a2.5,2.5 0,0 1,5 0v24a2.5,2.5 0,0 1,-5 0z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M62,45a2.5,2.5 0,0 1,5 0v16a2.5,2.5 0,0 1,-5 0z" />
+    <!-- AI spark accent -->
+    <path
+        android:fillColor="#F59E0B"
+        android:pathData="M72,33l1.6,3.9l3.9,1.6l-3.9,1.6L72,44l-1.6,-3.9l-3.9,-1.6l3.9,-1.6z" />
+</vector>

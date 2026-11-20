@@ -1,0 +1,393 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Shared security primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidEnglishLevel(level) {
+      return level is string && level in ['LOW', 'MEDIUM', 'HIGH'];
+    }
+
+    // 1. UserProfile validation
+    function isValidUserProfile(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100 &&
+             data.email is string && data.email.size() <= 160 &&
+             isValidEnglishLevel(data.englishLevel) &&
+             data.themeMode is string && data.themeMode in ['SYSTEM', 'LIGHT', 'DARK'] &&
+             data.marathiScript is string && data.marathiScript in ['ROMAN', 'ROMAN_AND_DEVANAGARI'] &&
+             data.autoSpeakAiReplies is bool &&
+             data.speechRate is number && data.speechRate >= 0.5 && data.speechRate <= 1.5 &&
+             (!('weeklyInterviewFrequency' in data) || (data.weeklyInterviewFrequency is int && data.weeklyInterviewFrequency >= 1 && data.weeklyInterviewFrequency <= 2)) &&
+             data.totalConversations is int && data.totalConversations >= 0 &&
+             data.totalMessagesSent is int && data.totalMessagesSent >= 0 &&
+             data.grammarMistakesDetected is int && data.grammarMistakesDetected >= 0 &&
+             data.topicsCompletedCount is int && data.topicsCompletedCount >= 0 &&
+             data.vocabularyLearnedCount is int && data.vocabularyLearnedCount >= 0 &&
+             data.totalPracticeSeconds is int && data.totalPracticeSeconds >= 0 &&
+             data.currentStreakDays is int && data.currentStreakDays >= 0 &&
+             (!('lastPracticeDate' in data) || (data.lastPracticeDate is string && data.lastPracticeDate.size() <= 20)) &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // 2. ChatSession validation
+    function isValidChatSession(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             (!('topicId' in data) || (data.topicId is string && data.topicId.size() <= 128)) &&
+             (!('topicTitle' in data) || (data.topicTitle is string && data.topicTitle.size() <= 120)) &&
+             (!('interviewCategory' in data) || (data.interviewCategory is string && data.interviewCategory.size() <= 80)) &&
+             isValidEnglishLevel(data.englishLevel) &&
+             data.mode is string && data.mode in ['CHAT', 'VOICE', 'TOPIC', 'INTERVIEW'] &&
+             data.messageCount is int && data.messageCount >= 0 &&
+             data.mistakesCount is int && data.mistakesCount >= 0 &&
+             data.lastMessagePreview is string && data.lastMessagePreview.size() <= 240 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // 3. ChatMessage validation
+    function isValidChatMessage(data, userId, sessionId) {
+      return data.userId is string && data.userId == userId &&
+             data.sessionId is string && data.sessionId == sessionId &&
+             data.role is string && data.role in ['user', 'assistant'] &&
+             data.text is string && data.text.size() >= 1 && data.text.size() <= 4000 &&
+             isValidEnglishLevel(data.englishLevel) &&
+             data.hasMistake is bool &&
+             (!('originalSentence' in data) || (data.originalSentence is string && data.originalSentence.size() <= 1000)) &&
+             (!('correctedSentence' in data) || (data.correctedSentence is string && data.correctedSentence.size() <= 1000)) &&
+             (!('marathiExplanation' in data) || (data.marathiExplanation is string && data.marathiExplanation.size() <= 1500)) &&
+             (!('naturalAlternative' in data) || (data.naturalAlternative is string && data.naturalAlternative.size() <= 1000)) &&
+             (!('mistakeCategory' in data) || (data.mistakeCategory is string && data.mistakeCategory.size() <= 80)) &&
+             (!('suggestedWord' in data) || (data.suggestedWord is string && data.suggestedWord.size() <= 80)) &&
+             (!('suggestedWordMarathi' in data) || (data.suggestedWordMarathi is string && data.suggestedWordMarathi.size() <= 200)) &&
+             (!('suggestedWordExample' in data) || (data.suggestedWordExample is string && data.suggestedWordExample.size() <= 400)) &&
+             (!('suggestedWordPronunciation' in data) || (data.suggestedWordPronunciation is string && data.suggestedWordPronunciation.size() <= 120)) &&
+             (!('suggestedWordPos' in data) || (data.suggestedWordPos is string && data.suggestedWordPos.size() <= 40)) &&
+             data.voiceMessage is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // 4. DailyTopicRecord validation
+    function isValidDailyTopic(data, userId, dateKey) {
+      return data.userId is string && data.userId == userId &&
+             data.dateKey is string && data.dateKey == dateKey && data.dateKey.size() <= 20 &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.category is string && data.category.size() >= 1 && data.category.size() <= 60 &&
+             (!('sessionType' in data) || (data.sessionType is string && data.sessionType in ['DAILY_CONVERSATION', 'INTERVIEW_PRACTICE', 'GENERAL_CONVERSATION', 'REVISION'])) &&
+             (!('interviewCategory' in data) || (data.interviewCategory is string && data.interviewCategory.size() <= 80)) &&
+             (!('scheduleAdjustedNote' in data) || (data.scheduleAdjustedNote is string && data.scheduleAdjustedNote.size() <= 300)) &&
+             isValidEnglishLevel(data.englishLevel) &&
+             data.promptSummary is string && data.promptSummary.size() >= 1 && data.promptSummary.size() <= 600 &&
+             data.starterQuestion is string && data.starterQuestion.size() >= 1 && data.starterQuestion.size() <= 500 &&
+             data.marathiHint is string && data.marathiHint.size() <= 500 &&
+             data.completed is bool &&
+             (!('sessionId' in data) || (data.sessionId is string && data.sessionId.size() <= 128)) &&
+             data.turnsCompleted is int && data.turnsCompleted >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // 5. InterviewReport validation
+    function isValidInterviewReport(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.sessionId is string && data.sessionId.size() >= 1 && data.sessionId.size() <= 128 &&
+             data.interviewCategory is string && data.interviewCategory.size() >= 1 && data.interviewCategory.size() <= 80 &&
+             isValidEnglishLevel(data.englishLevel) &&
+             data.overallSummary is string && data.overallSummary.size() >= 1 && data.overallSummary.size() <= 1000 &&
+             data.grammarImprovement is string && data.grammarImprovement.size() >= 1 && data.grammarImprovement.size() <= 1500 &&
+             data.vocabularyFeedback is string && data.vocabularyFeedback.size() >= 1 && data.vocabularyFeedback.size() <= 1500 &&
+             data.sentenceFormation is string && data.sentenceFormation.size() >= 1 && data.sentenceFormation.size() <= 1500 &&
+             data.answerClarity is string && data.answerClarity.size() >= 1 && data.answerClarity.size() <= 1500 &&
+             data.communicationFeedback is string && data.communicationFeedback.size() >= 1 && data.communicationFeedback.size() <= 1500 &&
+             data.suggestedBetterAnswers is string && data.suggestedBetterAnswers.size() >= 1 && data.suggestedBetterAnswers.size() <= 2500 &&
+             data.areasToImprove is string && data.areasToImprove.size() >= 1 && data.areasToImprove.size() <= 1500 &&
+             data.marathiCoachNote is string && data.marathiCoachNote.size() >= 1 && data.marathiCoachNote.size() <= 1500 &&
+             data.questionsAnswered is int && data.questionsAnswered >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // 6. VocabularyWord validation
+    function isValidVocabularyWord(data, userId) {
+      return data.userId is string && data.userId == userId &&
+             data.word is string && data.word.size() >= 1 && data.word.size() <= 80 &&
+             data.marathiMeaning is string && data.marathiMeaning.size() >= 1 && data.marathiMeaning.size() <= 200 &&
+             data.exampleSentence is string && data.exampleSentence.size() >= 1 && data.exampleSentence.size() <= 400 &&
+             data.pronunciation is string && data.pronunciation.size() <= 120 &&
+             data.partOfSpeech is string && data.partOfSpeech.size() <= 40 &&
+             isValidEnglishLevel(data.englishLevel) &&
+             data.dateLearned is string && data.dateLearned.size() >= 1 && data.dateLearned.size() <= 20 &&
+             data.learned is bool &&
+             data.source is string && data.source in ['DAILY', 'CHAT', 'MANUAL'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    // 7. DailyProgressStat validation
+    function isValidDailyStat(data, userId, dateKey) {
+      return data.userId is string && data.userId == userId &&
+             data.dateKey is string && data.dateKey == dateKey && data.dateKey.size() <= 20 &&
+             data.practiceSeconds is int && data.practiceSeconds >= 0 &&
+             data.messagesCount is int && data.messagesCount >= 0 &&
+             data.mistakesCount is int && data.mistakesCount >= 0 &&
+             data.wordsLearnedCount is int && data.wordsLearnedCount >= 0 &&
+             data.topicsCompletedCount is int && data.topicsCompletedCount >= 0 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId) && isValidId(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayName', 'email', 'englishLevel', 'themeMode',
+                         'marathiScript', 'autoSpeakAiReplies', 'speechRate',
+                         'totalConversations', 'totalMessagesSent', 'grammarMistakesDetected',
+                         'topicsCompletedCount', 'vocabularyLearnedCount',
+                         'totalPracticeSeconds', 'currentStreakDays', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayName', 'email', 'englishLevel', 'themeMode',
+                         'marathiScript', 'autoSpeakAiReplies', 'speechRate',
+                         'weeklyInterviewFrequency',
+                         'totalConversations', 'totalMessagesSent', 'grammarMistakesDetected',
+                         'topicsCompletedCount', 'vocabularyLearnedCount',
+                         'totalPracticeSeconds', 'currentStreakDays', 'lastPracticeDate',
+                         'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isOwner(userId) &&
+                       isValidId(userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayName', 'email', 'englishLevel', 'themeMode',
+                         'marathiScript', 'autoSpeakAiReplies', 'speechRate',
+                         'weeklyInterviewFrequency',
+                         'totalConversations', 'totalMessagesSent', 'grammarMistakesDetected',
+                         'topicsCompletedCount', 'vocabularyLearnedCount',
+                         'totalPracticeSeconds', 'currentStreakDays', 'lastPracticeDate',
+                         'updatedAt'
+                       ]);
+
+      allow delete: if false;
+
+      // Chat Sessions subcollection
+      match /chatSessions/{sessionId} {
+        allow get: if isOwner(userId) && isValidId(sessionId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(sessionId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'englishLevel', 'mode', 'messageCount',
+                           'mistakesCount', 'lastMessagePreview', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'topicId', 'topicTitle', 'interviewCategory',
+                           'englishLevel', 'mode', 'messageCount', 'mistakesCount',
+                           'lastMessagePreview', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidChatSession(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(sessionId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().mode == existing().mode &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidChatSession(incoming(), userId) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'englishLevel', 'messageCount', 'mistakesCount',
+                           'lastMessagePreview', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(sessionId);
+
+        // Messages subcollection inside a ChatSession
+        match /messages/{messageId} {
+          allow get: if isOwner(userId) && isValidId(sessionId) && isValidId(messageId);
+          allow list: if isOwner(userId) && isValidId(sessionId);
+
+          allow create: if isOwner(userId) &&
+                           isValidId(sessionId) &&
+                           isValidId(messageId) &&
+                           incoming().keys().hasAll([
+                             'userId', 'sessionId', 'role', 'text', 'englishLevel',
+                             'hasMistake', 'voiceMessage', 'createdAt'
+                           ]) &&
+                           incoming().keys().hasOnly([
+                             'userId', 'sessionId', 'role', 'text', 'englishLevel',
+                             'hasMistake', 'originalSentence', 'correctedSentence',
+                             'marathiExplanation', 'naturalAlternative', 'mistakeCategory',
+                             'suggestedWord', 'suggestedWordMarathi', 'suggestedWordExample',
+                             'suggestedWordPronunciation', 'suggestedWordPos',
+                             'voiceMessage', 'createdAt'
+                           ]) &&
+                           isValidChatMessage(incoming(), userId, sessionId);
+
+          allow update: if false;
+          allow delete: if isOwner(userId) && isValidId(sessionId) && isValidId(messageId);
+        }
+      }
+
+      // Daily Topics subcollection
+      match /dailyTopics/{dateKey} {
+        allow get: if isOwner(userId) && isValidId(dateKey);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(dateKey) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'title', 'category', 'englishLevel',
+                           'promptSummary', 'starterQuestion', 'marathiHint',
+                           'completed', 'turnsCompleted', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'title', 'category', 'sessionType',
+                           'interviewCategory', 'scheduleAdjustedNote', 'englishLevel',
+                           'promptSummary', 'starterQuestion', 'marathiHint',
+                           'completed', 'sessionId', 'turnsCompleted', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidDailyTopic(incoming(), userId, dateKey);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(dateKey) &&
+                         incoming().userId == existing().userId &&
+                         incoming().dateKey == existing().dateKey &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidDailyTopic(incoming(), userId, dateKey) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'category', 'sessionType', 'interviewCategory',
+                           'scheduleAdjustedNote', 'englishLevel', 'promptSummary',
+                           'starterQuestion', 'marathiHint', 'completed',
+                           'sessionId', 'turnsCompleted', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(dateKey);
+      }
+
+      // Interview Reports subcollection
+      match /interviewReports/{reportId} {
+        allow get: if isOwner(userId) && isValidId(reportId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(reportId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'sessionId', 'interviewCategory', 'englishLevel',
+                           'overallSummary', 'grammarImprovement', 'vocabularyFeedback',
+                           'sentenceFormation', 'answerClarity', 'communicationFeedback',
+                           'suggestedBetterAnswers', 'areasToImprove', 'marathiCoachNote',
+                           'questionsAnswered', 'createdAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'sessionId', 'interviewCategory', 'englishLevel',
+                           'overallSummary', 'grammarImprovement', 'vocabularyFeedback',
+                           'sentenceFormation', 'answerClarity', 'communicationFeedback',
+                           'suggestedBetterAnswers', 'areasToImprove', 'marathiCoachNote',
+                           'questionsAnswered', 'createdAt'
+                         ]) &&
+                         isValidInterviewReport(incoming(), userId);
+
+        allow update: if false;
+        allow delete: if isOwner(userId) && isValidId(reportId);
+      }
+
+      // Vocabulary subcollection
+      match /vocabulary/{wordId} {
+        allow get: if isOwner(userId) && isValidId(wordId);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(wordId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'word', 'marathiMeaning', 'exampleSentence',
+                           'pronunciation', 'partOfSpeech', 'englishLevel',
+                           'dateLearned', 'learned', 'source', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'word', 'marathiMeaning', 'exampleSentence',
+                           'pronunciation', 'partOfSpeech', 'englishLevel',
+                           'dateLearned', 'learned', 'source', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidVocabularyWord(incoming(), userId);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(wordId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().source == existing().source &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidVocabularyWord(incoming(), userId) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'word', 'marathiMeaning', 'exampleSentence', 'pronunciation',
+                           'partOfSpeech', 'englishLevel', 'dateLearned', 'learned', 'updatedAt'
+                         ]);
+
+        allow delete: if isOwner(userId) && isValidId(wordId);
+      }
+
+      // Daily Stats subcollection
+      match /dailyStats/{dateKey} {
+        allow get: if isOwner(userId) && isValidId(dateKey);
+        allow list: if isOwner(userId);
+
+        allow create: if isOwner(userId) &&
+                         isValidId(dateKey) &&
+                         incoming().keys().hasAll([
+                           'userId', 'dateKey', 'practiceSeconds', 'messagesCount',
+                           'mistakesCount', 'wordsLearnedCount', 'topicsCompletedCount',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'dateKey', 'practiceSeconds', 'messagesCount',
+                           'mistakesCount', 'wordsLearnedCount', 'topicsCompletedCount',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidDailyStat(incoming(), userId, dateKey);
+
+        allow update: if isOwner(userId) &&
+                         isValidId(dateKey) &&
+                         incoming().userId == existing().userId &&
+                         incoming().dateKey == existing().dateKey &&
+                         incoming().createdAt == existing().createdAt &&
+                         isValidDailyStat(incoming(), userId, dateKey) &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'practiceSeconds', 'messagesCount', 'mistakesCount',
+                           'wordsLearnedCount', 'topicsCompletedCount', 'updatedAt'
+                         ]);
+
+        allow delete: if false;
+      }
+    }
+  }
+}

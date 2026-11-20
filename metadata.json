@@ -1,0 +1,6 @@
+{
+  "name": "FluentMate AI",
+  "description": "AI-powered English speaking, grammar, and vocabulary tutor with simple Roman Marathi explanations, voice practice, daily topics, and progress analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

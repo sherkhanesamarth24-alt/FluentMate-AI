@@ -1,0 +1,218 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Learner profile, preferences, and aggregate English learning progress.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "Authenticated Firebase UID." },
+        "displayName": { "type": "string", "description": "User display name." },
+        "email": { "type": "string", "description": "User email address." },
+        "englishLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"], "description": "Selected English proficiency level." },
+        "themeMode": { "type": "string", "enum": ["SYSTEM", "LIGHT", "DARK"], "description": "App theme preference." },
+        "marathiScript": { "type": "string", "enum": ["ROMAN", "ROMAN_AND_DEVANAGARI"], "description": "Marathi explanation script style." },
+        "autoSpeakAiReplies": { "type": "boolean", "description": "Whether AI replies automatically speak via TTS in Voice Practice." },
+        "speechRate": { "type": "number", "description": "TTS playback speed between 0.5 and 1.5." },
+        "weeklyInterviewFrequency": { "type": "integer", "description": "Preferred interview practice sessions per week (1 or 2, default 2)." },
+        "totalConversations": { "type": "integer", "description": "Total chat and voice sessions started." },
+        "totalMessagesSent": { "type": "integer", "description": "Total learner messages analyzed." },
+        "grammarMistakesDetected": { "type": "integer", "description": "Total genuine mistakes detected." },
+        "topicsCompletedCount": { "type": "integer", "description": "Total daily topics completed." },
+        "vocabularyLearnedCount": { "type": "integer", "description": "Total vocabulary words marked as learned." },
+        "totalPracticeSeconds": { "type": "integer", "description": "Total active practice seconds." },
+        "currentStreakDays": { "type": "integer", "description": "Consecutive daily practice streak." },
+        "lastPracticeDate": { "type": "string", "description": "Last practice date in YYYY-MM-DD format." },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Server creation timestamp." },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "Server update timestamp." }
+      },
+      "required": [
+        "userId", "displayName", "email", "englishLevel", "themeMode", "marathiScript",
+        "autoSpeakAiReplies", "speechRate", "totalConversations", "totalMessagesSent",
+        "grammarMistakesDetected", "topicsCompletedCount", "vocabularyLearnedCount",
+        "totalPracticeSeconds", "currentStreakDays", "createdAt", "updatedAt"
+      ]
+    },
+    "ChatSession": {
+      "title": "ChatSession",
+      "description": "An AI Chat, Voice Practice, Daily Topic, or Weekly Interview conversation session.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "topicId": { "type": "string" },
+        "topicTitle": { "type": "string" },
+        "interviewCategory": { "type": "string" },
+        "englishLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "mode": { "type": "string", "enum": ["CHAT", "VOICE", "TOPIC", "INTERVIEW"] },
+        "messageCount": { "type": "integer" },
+        "mistakesCount": { "type": "integer" },
+        "lastMessagePreview": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "title", "englishLevel", "mode", "messageCount",
+        "mistakesCount", "lastMessagePreview", "createdAt", "updatedAt"
+      ]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Individual message turn including optional English correction and Roman Marathi explanation.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "assistant"] },
+        "text": { "type": "string" },
+        "englishLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "hasMistake": { "type": "boolean" },
+        "originalSentence": { "type": "string" },
+        "correctedSentence": { "type": "string" },
+        "marathiExplanation": { "type": "string" },
+        "naturalAlternative": { "type": "string" },
+        "mistakeCategory": { "type": "string" },
+        "suggestedWord": { "type": "string" },
+        "suggestedWordMarathi": { "type": "string" },
+        "suggestedWordExample": { "type": "string" },
+        "suggestedWordPronunciation": { "type": "string" },
+        "suggestedWordPos": { "type": "string" },
+        "voiceMessage": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "sessionId", "role", "text", "englishLevel",
+        "hasMistake", "voiceMessage", "createdAt"
+      ]
+    },
+    "DailyTopicRecord": {
+      "title": "DailyTopicRecord",
+      "description": "Daily generated English conversation or scheduled weekly interview topic.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "sessionType": { "type": "string", "enum": ["DAILY_CONVERSATION", "INTERVIEW_PRACTICE", "GENERAL_CONVERSATION", "REVISION"] },
+        "interviewCategory": { "type": "string" },
+        "scheduleAdjustedNote": { "type": "string" },
+        "englishLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "promptSummary": { "type": "string" },
+        "starterQuestion": { "type": "string" },
+        "marathiHint": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "sessionId": { "type": "string" },
+        "turnsCompleted": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "dateKey", "title", "category", "englishLevel", "promptSummary",
+        "starterQuestion", "marathiHint", "completed", "turnsCompleted",
+        "createdAt", "updatedAt"
+      ]
+    },
+    "InterviewReport": {
+      "title": "InterviewReport",
+      "description": "AI-generated performance report after a weekly Interview Practice session.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "interviewCategory": { "type": "string" },
+        "englishLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "overallSummary": { "type": "string" },
+        "grammarImprovement": { "type": "string" },
+        "vocabularyFeedback": { "type": "string" },
+        "sentenceFormation": { "type": "string" },
+        "answerClarity": { "type": "string" },
+        "communicationFeedback": { "type": "string" },
+        "suggestedBetterAnswers": { "type": "string" },
+        "areasToImprove": { "type": "string" },
+        "marathiCoachNote": { "type": "string" },
+        "questionsAnswered": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "sessionId", "interviewCategory", "englishLevel", "overallSummary",
+        "grammarImprovement", "vocabularyFeedback", "sentenceFormation", "answerClarity",
+        "communicationFeedback", "suggestedBetterAnswers", "areasToImprove",
+        "marathiCoachNote", "questionsAnswered", "createdAt"
+      ]
+    },
+    "VocabularyWord": {
+      "title": "VocabularyWord",
+      "description": "Saved English vocabulary entry with Marathi meaning, pronunciation, and example.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "word": { "type": "string" },
+        "marathiMeaning": { "type": "string" },
+        "exampleSentence": { "type": "string" },
+        "pronunciation": { "type": "string" },
+        "partOfSpeech": { "type": "string" },
+        "englishLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "dateLearned": { "type": "string" },
+        "learned": { "type": "boolean" },
+        "source": { "type": "string", "enum": ["DAILY", "CHAT", "MANUAL"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "word", "marathiMeaning", "exampleSentence", "pronunciation",
+        "partOfSpeech", "englishLevel", "dateLearned", "learned", "source",
+        "createdAt", "updatedAt"
+      ]
+    },
+    "DailyProgressStat": {
+      "title": "DailyProgressStat",
+      "description": "Real daily learning activity log used for dashboard and progress charts.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "dateKey": { "type": "string" },
+        "practiceSeconds": { "type": "integer" },
+        "messagesCount": { "type": "integer" },
+        "mistakesCount": { "type": "integer" },
+        "wordsLearnedCount": { "type": "integer" },
+        "topicsCompletedCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "dateKey", "practiceSeconds", "messagesCount", "mistakesCount",
+        "wordsLearnedCount", "topicsCompletedCount", "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile, settings, and aggregate English learning metrics."
+    },
+    "/users/{userId}/chatSessions/{sessionId}": {
+      "schema": { "$ref": "#/entities/ChatSession" },
+      "description": "User-scoped AI chat, voice practice, topic, and interview sessions."
+    },
+    "/users/{userId}/chatSessions/{sessionId}/messages/{messageId}": {
+      "schema": { "$ref": "#/entities/ChatMessage" },
+      "description": "Messages and grammar corrections inside a session."
+    },
+    "/users/{userId}/dailyTopics/{dateKey}": {
+      "schema": { "$ref": "#/entities/DailyTopicRecord" },
+      "description": "Daily conversation and scheduled weekly interview topics keyed by YYYY-MM-DD."
+    },
+    "/users/{userId}/interviewReports/{reportId}": {
+      "schema": { "$ref": "#/entities/InterviewReport" },
+      "description": "AI-generated Interview Performance Reports."
+    },
+    "/users/{userId}/vocabulary/{wordId}": {
+      "schema": { "$ref": "#/entities/VocabularyWord" },
+      "description": "User-saved and daily vocabulary words."
+    },
+    "/users/{userId}/dailyStats/{dateKey}": {
+      "schema": { "$ref": "#/entities/DailyProgressStat" },
+      "description": "Daily practice seconds, messages, mistakes, and completions keyed by YYYY-MM-DD."
+    }
+  }
+}

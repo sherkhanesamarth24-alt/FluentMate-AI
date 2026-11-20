@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">FluentMate AI</string>
+    <string name="tagline">Your Personal English &amp; Marathi AI Tutor</string>
+    <string name="sign_in_with_google">Sign in with Google</string>
+    <string name="nav_dashboard">Dashboard</string>
+    <string name="nav_ai_chat">AI Chat</string>
+    <string name="nav_voice_practice">Voice Practice</string>
+    <string name="nav_daily_topics">Daily Topics</string>
+    <string name="nav_vocabulary">Vocabulary</string>
+    <string name="nav_progress">Progress</string>
+    <string name="nav_settings">Settings</string>
+    <string name="mic_permission_required">Microphone permission is needed to practice spoken English.</string>
+    <string name="speech_unavailable_error">On-device speech recognition service is unavailable on this device. You can still type below or use AI Chat.</string>
+</resources>
